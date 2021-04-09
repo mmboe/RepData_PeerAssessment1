@@ -1,0 +1,112 @@
+---
+output: 
+  html_document: 
+    keep_md: yes
+---
+---
+title: "Reproducible Research Week 2 Project"
+author: "Maureen McAndrew"
+date: "4/3/2021"
+output: 
+  html_document: 
+    keep_md: yes
+    
+    
+    
+
+First we need to load in data 
+
+```read_data
+ 
+ 
+unzip("C://Users/maure/Documents/R/Repo Research_4_3_21/activity.zip")
+reprodata <- read.csv("activity.csv",  header = TRUE, sep = ",")
+```
+create a histogram of total steps per day, but first install dplyr to create
+a new dataset (steps_day) with a variable that summarizes number of steps per 
+day = totalsteps
+
+```create_hist
+
+library(dplyr)
+steps_day <- reprodata %>% group_by(date) %>% summarize(totalsteps = sum(steps))
+hist(steps_day$totalsteps)
+```
+Calculate mean and median number of steps per day
+
+```mean_median_steps_day
+mean(steps_day$totalsteps, na.rm = TRUE)
+# answer [1] 10766.19
+median(steps_day$totalsteps, na.rm = TRUE)
+# answer[1] 10765
+```
+remove na values from dataset
+
+```remove_na
+nonareprodata <- na.omit(reprodata)
+```
+Create a time series plot of average steps per day, first install ggplot2 
+
+```create_plot_mean_steps_day
+nonreprodata1 <- nonareprodata %>% group_by (date) %>% mutate(mean_steps = mean(steps))
+nonreprodata1$date <- as.Date(nonreprodata1$date)
+library(ggplot2)
+plot2 <- ggplot(nonreprodata1, aes(date, mean_steps))+
+geom_line()+
+geom_point()+
+scale_x_date(date_labels = "%Y %b %d")+
+labs(title = "Average Number of Steps Taken per Day", 
+    x = "Date", y = "Mean 
+       Steps per Day")
+print(plot2)
+```
+Determine the 5 minute interval that gives the maximum number of steps
+
+```5_min_interval_max
+max <- nonareprodata %>% group_by(interval, date) %>% summarize(max_steps = max(steps))
+range (max$max_steps)
+max %>% filter(max_steps == 806)
+#interval date       max_steps
+#     <int> <chr>          <int>
+#      615 2012-11-27       806
+```
+Create a histogram of total steps per day with imputed (used mean) missing 
+values. Then calculate new median and mean of total steps for imputed dataset.
+
+```create_hist_imputed
+reprodata$steps [is.na(reprodata$steps)] <- mean(reprodata$steps, na.rm = TRUE)
+reprodata$date <- as.Date(reprodata$date)
+steps_day <- reprodata %>% group_by(date) %>% summarize(totalsteps = sum(steps))
+hist(steps_day$totalsteps)
+
+mean(steps_day$totalsteps)
+#answer[1] 10766.19
+median(steps_day$totalsteps)
+#answer[1] 10766.19
+```
+Must differentiate dataset dates into weekdays versus weekends
+First load lubridate package
+
+```separate_weekend_weekday
+
+library(lubridate)
+reprodataw <- reprodata %>% mutate(weekday = weekdays(date))
+
+reproweekday <- reprodataw %>% mutate(day = factor(ifelse(weekday == 
+      c("Saturday", "Sunday"), "Weekend", "Weekday")))
+```
+Get average steps per interval between weekdays and weekend days
+
+```weekend_weekday
+weekday <- reproweekday %>% group_by (interval, day) %>% summarize(mean_steps = mean(steps))
+```
+plot weekend versus weekday 
+
+```create_plot
+library(ggplot2)
+pplot <- ggplot(weekday, aes(interval, mean_steps, color = day))+
+geom_line()+
+facet_wrap(~day)+
+labs(title = "Average Steps per 5 Minute Interval", x = "Time Intervals", y = "Average Number of Steps")
+print(pplot)
+```
