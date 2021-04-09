@@ -1,25 +1,101 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+author: "Maureen McAndrew"
+date: "4/9/2021"
+output:
+     html_document: default
+     keep_md: true
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+Load data
+```{r chunk1}
+unzip("C://Users/maure/Documents/R/Course 5 JHU Week 2 project/repdata_data_activity.zip")
+reprodata <- read.csv("activity.csv",  header = TRUE, sep = ",")
+```
+change class of data variable
+```{r chunk2}
+library(lubridate)
+reprodata$date <- as.Date(reprodata$date)
+```
+create a histogram of total steps per day
+```{r hist1}
+library(dplyr)
+steps_day <- reprodata %>% group_by(date) %>% summarize(totalsteps = sum(steps))
+steps_day_hist <- hist(steps_day$totalsteps, main = "Total Steps per Day")
+```
+Calculate mean and median number of steps per day
+```{r chunk4}
+a <- mean(steps_day$totalsteps, na.rm = TRUE)
+b <- median(steps_day$totalsteps, na.rm = TRUE)
+```
+Remove na values from reprodata
+```{r chunk5}
+nonareprodata <- na.omit(reprodata)
+```
+Get mean number of steps taken averaged across all days 
+```{r chunk6}
+nonareprodata1 <- nonareprodata %>% group_by(date) %>% summarize(mean = mean(steps))
+```
+Create a time series plot of average steps per day
+```{r plot2}
+library(ggplot2)
+plot2 <- ggplot(nonareprodata1, aes(date, mean))+
+geom_line()+
+geom_point()+
+scale_x_date(date_labels = "%Y %b %d")+
+labs(title = "Average Number of Steps Taken per Day", 
+  x = "Date", 
+  y = "Mean Steps per Day")
+print(plot2)
+```
+Determine the 5 minute interval that gives the maximum number of steps
+```{r chunk8}
+library(dplyr)
+max <- nonareprodata %>% group_by(interval, date) %>% summarize(max_steps = max(steps))
+range (max$max_steps)
+max %>% filter(max_steps == 806)
+```
+Create a histogram of total steps per day with imputed (used mean) missing 
+values. Then calculate new median and mean of total steps for imputed dataset.
+```{r hist2}
+library(dplyr)
+reprodata$steps [is.na(reprodata$steps)] <- mean(reprodata$steps, na.rm = TRUE)
+steps_day_impute <- reprodata %>% group_by(date) %>% summarize(totalsteps = sum(steps))
+hist_imputed <- hist(steps_day_impute$totalsteps, main = "Total Steps Per Day with Imputed Values", xlab = "Total Steps per day")
+print(hist_imputed)
+```
+Get mean and median of total steps with imputed values
+```{chunk10}
+c <- mean(steps_day_impute$totalsteps)
+d <- median(steps_day_impute$totalsteps)
+c - a
+d - b
+# no mean difference between imputed values and removed na, but median difference is 1.188679
+```
+To create comparison panel plot between weekend and weekday values, first must separate dates into weekend and weekdays
+```{r chunk11}
+reprodata$date <- as.Date(reprodata$date)
+library(dplyr)
+reprodataw <- reprodata %>% mutate(weekday = weekdays(date))
+reproweekday <- reprodataw %>% mutate(day = factor(ifelse(weekday == 
+      c("Saturday", "Sunday"), "Weekend", "Weekday")))
+```
+Get mean number of steps by weekend or weekday according to time interval
+```{r chunk12}
+weekday <- reproweekday %>% group_by (interval, day) %>% summarize(mean_steps = mean(steps))
+```
+Create panel plot comparing time intervals for weekdays vs. weekends
+```{r pplot}
+library(ggplot2)
+pplot <- ggplot(weekday, aes(interval, mean_steps, color = day))+
+geom_line()+
+facet_wrap(~day)+
+ggtitle("Average Steps per 5 Minute Interval")+
+xlab ("Time Intervals")+
+ylab("Average Number of Steps")
+print(pplot)
+```
